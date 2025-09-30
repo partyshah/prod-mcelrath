@@ -484,7 +484,7 @@ function SpeechSession({
         />
 
         {/* Speech Bubble */}
-        {sessionState === 'ai_speaking' && currentAiSpeech && (
+        {(sessionState === 'ai_speaking' || sessionState === 'student_recording') && currentAiSpeech && (
           <div style={{
             position: 'relative',
             backgroundColor: '#f0f0f0',
