@@ -16,14 +16,29 @@ class AITutorService:
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.sessions = {}  # Store conversation managers by session_id
         
-    def initialize_session(self, session_id: str, pdf_paths: List[str]) -> Dict:
+    def initialize_session(self, session_id: str, pdf_paths: List[str], assignment_id: int = None) -> Dict:
         """Initialize a new tutoring session with PDF context"""
         try:
             from datetime import datetime
-            
-            # Extract text from PDFs
-            pdf_texts = extract_texts_from_pdfs(pdf_paths)
-            pdf_context = format_pdf_context(pdf_texts)
+            from database import SessionLocal
+            from models import Assignment
+
+            # First check if we have PDF content in database
+            pdf_context = None
+            if assignment_id:
+                db = SessionLocal()
+                try:
+                    assignment = db.query(Assignment).filter_by(id=assignment_id).first()
+                    if assignment and assignment.pdf_content:
+                        pdf_context = assignment.pdf_content
+                        logger.info(f"Using PDF content from database for assignment {assignment_id}")
+                finally:
+                    db.close()
+
+            # If no database content, extract from files
+            if not pdf_context:
+                pdf_texts = extract_texts_from_pdfs(pdf_paths)
+                pdf_context = format_pdf_context(pdf_texts)
             
             # Create conversation manager for this session
             conv_manager = ConversationManager()
@@ -37,11 +52,12 @@ class AITutorService:
                 'start_time': datetime.now()
             }
             
-            logger.info(f"Initialized session {session_id} with {len(pdf_paths)} PDFs")
+            pdf_count = 1 if assignment_id and pdf_context else len(pdf_paths)
+            logger.info(f"Initialized session {session_id} with PDF content")
             return {
                 'success': True,
                 'message': 'Session initialized',
-                'pdf_count': len(pdf_texts)
+                'pdf_count': pdf_count
             }
             
         except Exception as e:
@@ -62,9 +78,9 @@ class AITutorService:
                 parts = session_id.split('_')
                 if len(parts) >= 3:
                     assignment_id = int(parts[2])
-                    # Auto-initialize session with default PDFs
-                    default_pdfs = ["week1/reading1.pdf", "week1/reading2.pdf"]
-                    init_result = self.initialize_session(session_id, default_pdfs)
+                    # Auto-initialize session with assignment PDFs or defaults
+                    default_pdfs = ["week1/ethricsreading.pdf"]
+                    init_result = self.initialize_session(session_id, default_pdfs, assignment_id=assignment_id)
                     if not init_result['success']:
                         return "Could not initialize session. Please start a new assessment.", {'error': 'Auto-init failed'}
                 else:

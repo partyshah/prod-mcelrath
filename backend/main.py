@@ -234,8 +234,8 @@ async def start_ai_session(request: StartSessionRequest, db: DBSession = Depends
         # Create session ID
         session_id = f"session_{request.student_id}_{request.assignment_id}_{int(datetime.now().timestamp())}"
         
-        # Initialize AI service with PDFs
-        result = ai_service.initialize_session(session_id, assignment.pdf_paths)
+        # Initialize AI service with PDFs (pass assignment_id to check database first)
+        result = ai_service.initialize_session(session_id, assignment.pdf_paths, assignment_id=request.assignment_id)
         
         if not result['success']:
             raise HTTPException(status_code=500, detail=result['error'])
