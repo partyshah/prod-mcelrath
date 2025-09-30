@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import heatherPhoto from './assets/Heather James photo.png'
+import heatherPhoto from './assets/heatherheadshot.jpg'
 
 interface SpeechSessionProps {
   studentId: number
