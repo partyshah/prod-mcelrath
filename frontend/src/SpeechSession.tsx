@@ -28,7 +28,7 @@ function SpeechSession({
   const [sessionState, setSessionState] = useState<SessionState>('not_started')
   const [transcript, setTranscript] = useState<Turn[]>([])
   const [isRecording, setIsRecording] = useState(false)
-  const [, setCurrentAiResponse] = useState('')
+  const [currentAiSpeech, setCurrentAiSpeech] = useState('')
   const [audioUrl, setAudioUrl] = useState<string>('')
   const [, setWaitingForPlay] = useState(false)
   const [aiSessionId, setAiSessionId] = useState<string | null>(null)
@@ -73,7 +73,10 @@ function SpeechSession({
 
   const submitRecording = useCallback(async () => {
     if (!mediaRecorderRef.current || !isRecording) return
-    
+
+    // Reset AI speech bubble when user submits response
+    setCurrentAiSpeech('')
+
     setSessionState('processing')
     
     mediaRecorderRef.current.stop()
@@ -137,7 +140,7 @@ function SpeechSession({
         // Add AI response to transcript
         const finalTranscript = [...newTranscript, { speaker: 'ai' as const, text: aiText }]
         setTranscript(finalTranscript)
-        setCurrentAiResponse(aiText)
+        setCurrentAiSpeech(aiText)
         
         // Convert AI response to speech
         const ttsResponse = await fetch(`${apiUrl}/text-to-speech`, {
@@ -288,8 +291,8 @@ function SpeechSession({
       
       const aiData = await aiResponse.json()
       const aiText = aiData.response
-      
-      setCurrentAiResponse(aiText)
+
+      setCurrentAiSpeech(aiText)
       
       // Convert to speech
       const ttsResponse = await fetch(`${apiUrl}/text-to-speech`, {
@@ -452,17 +455,18 @@ function SpeechSession({
 
       {/* Professor Avatar Area */}
       <div style={{
-        height: '200px',
+        minHeight: '200px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         margin: '30px 0',
-        position: 'relative'
+        position: 'relative',
+        gap: '20px'
       }}>
         {/* Professor Avatar */}
-        <img 
-          src={heatherPhoto} 
+        <img
+          src={heatherPhoto}
           alt="Professor Heather James"
           style={{
             width: '140px',
@@ -471,13 +475,43 @@ function SpeechSession({
             objectFit: 'cover',
             position: 'relative',
             zIndex: 2,
-            border: sessionState === 'ai_speaking' ? '3px solid #ff4444' : 
-                    sessionState === 'loading_response' ? '3px solid #2196F3' : 
+            border: sessionState === 'ai_speaking' ? '3px solid #ff4444' :
+                    sessionState === 'loading_response' ? '3px solid #2196F3' :
                     'none',
-            animation: (sessionState === 'ai_speaking' || sessionState === 'loading_response') ? 
+            animation: (sessionState === 'ai_speaking' || sessionState === 'loading_response') ?
                       'pulse-border 1.5s ease-in-out infinite' : 'none'
           }}
         />
+
+        {/* Speech Bubble */}
+        {sessionState === 'ai_speaking' && currentAiSpeech && (
+          <div style={{
+            position: 'relative',
+            backgroundColor: '#f0f0f0',
+            padding: '15px 20px',
+            borderRadius: '15px',
+            maxWidth: '400px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: '#333'
+          }}>
+            {/* Speech bubble tail */}
+            <div style={{
+              position: 'absolute',
+              left: '-10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 0,
+              height: 0,
+              borderTop: '10px solid transparent',
+              borderBottom: '10px solid transparent',
+              borderRight: '10px solid #f0f0f0'
+            }} />
+            {currentAiSpeech}
+          </div>
+        )}
+      </div>
 
         {/* Status Text */}
         <div style={{ marginTop: '20px', textAlign: 'center' }}>
@@ -516,7 +550,6 @@ function SpeechSession({
             <p style={{ color: '#2196F3' }}>AI response loading...</p>
           )}
         </div>
-      </div>
 
       {/* Waveform Visualization (Placeholder) */}
       {sessionState === 'student_recording' && isRecording && (
@@ -587,7 +620,7 @@ function SpeechSession({
                 onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#555'}
                 onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#333'}
               >
-                Submit Response
+                Next Question
               </button>
             )}
           </>
